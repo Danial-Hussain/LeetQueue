@@ -85,7 +85,7 @@ const Text = styled.div`
 const Body = styled.div`
   display: flex;
   flex-direction: column;
-  margin: 15px 12px 0px 12px;
+  margin: 15px 16px 0px 16px;
 `
 
 export default IndexPopup

@@ -1,8 +1,8 @@
 {
   "name": "leetqueue",
-  "displayName": "Leetqueue",
+  "displayName": "LeetQueue",
   "version": "0.0.1",
-  "description": "The fastest way to level-up your leetcode skills.",
+  "description": "Level-up your leetcode skills through spaced repetition.",
   "author": "TeamLeet",
   "packageManager": "npm@9.2.0",
   "scripts": {
