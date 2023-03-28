@@ -2,8 +2,12 @@ import { useState } from "react"
 import styled from "styled-components"
 import { v4 as uuidv4 } from "uuid"
 
+import { sendToBackground } from "@plasmohq/messaging"
+
 import { useQueue } from "~hooks/useQueue"
 import type { Level } from "~types"
+
+import Input from "./Input"
 
 const addDays = function (prevDate: Date, days: number) {
   var date = new Date(prevDate.valueOf())
@@ -21,17 +25,14 @@ export const AddToQueue = () => {
   const [result, setResult] = useState<string>("")
 
   const handleSubmit = async () => {
-    if (link === "") {
-      setResult("Please enter the link to the question.")
-      return
-    } else if (question === "") {
+    if (question === "") {
       setResult("Please enter the name of the question.")
     } else if (remindDays === "") {
       setResult("Please enter when you would like to be remiended.")
     } else {
-      const today = new Date()
-      const rd = parseInt(remindDays)
-      const remindDate = addDays(today, rd).toISOString().slice(0, 10)
+      const remindDate = addDays(new Date(), parseInt(remindDays))
+        .toISOString()
+        .slice(0, 10)
 
       addToQueue({
         id: uuidv4(),
@@ -47,28 +48,36 @@ export const AddToQueue = () => {
       setQuestion("")
       setLevel("Easy")
       setRemindDays("")
+
+      await sendToBackground({ name: "badge" })
     }
   }
 
   return (
     <Container>
-      <Text fontSize={14}>{`Select a leetcode question and choose when 
+      <Text fontSize={16}>{`Select a leetcode question and choose when 
         you would like to be reminded to solve it.`}</Text>
       <QuestionContainer>
         <AddQuestionBox>
-          <Text fontSize={14}>{"Remind me of"}</Text>
-          <AddQuestionInput
-            type="text"
+          <Text fontSize={14} style={{ marginLeft: "4px" }}>
+            {"Remind me of"}
+          </Text>
+          <Input
+            autoFocus={true}
             value={question}
-            placeholder="Enter the question"
+            name={"question name"}
+            label={"Question Name"}
             onChange={(e) => setQuestion(e.target.value)}
           />
         </AddQuestionBox>
         <AddQuestionBox>
-          <Text fontSize={14}>{"Remind me in"}</Text>
-          <AddQuestionInput
-            type="text"
+          <Text fontSize={14} style={{ marginLeft: "4px" }}>
+            {"Remind me in"}
+          </Text>
+          <Input
             value={remindDays}
+            label={"Number of Days"}
+            name={"question reminder"}
             placeholder="X number of days"
             onChange={(e) => setRemindDays(e.target.value)}
           />
@@ -76,22 +85,27 @@ export const AddToQueue = () => {
       </QuestionContainer>
       <QuestionContainer>
         <AddQuestionBox>
-          <Text fontSize={14}>{"Question URL"}</Text>
-          <AddQuestionInput
-            type="text"
+          <Text fontSize={14} style={{ marginLeft: "4px" }}>
+            {"URL (optional)"}
+          </Text>
+          <Input
             value={link}
+            name={"question url"}
+            label={"Question Link"}
             placeholder="Enter the url"
             onChange={(e) => setLink(e.target.value)}
           />
         </AddQuestionBox>
         <AddQuestionBox>
-          <Text fontSize={14}>{"Difficulty"}</Text>
+          <Text fontSize={14} style={{ marginLeft: "4px" }}>
+            {"Question Difficulty"}
+          </Text>
           <AddQuestionSelect
             value={level}
             placeholder="Enter the url"
             onChange={(e) => setLevel(e.target.value as Level)}>
             {["Easy", "Medium", "Hard"].map((l, i) => (
-              <option key={i} value={l}>
+              <option key={i} value={l} style={{ fontSize: "16px" }}>
                 {l}
               </option>
             ))}
@@ -101,7 +115,7 @@ export const AddToQueue = () => {
       <AddQuestionButton onClick={handleSubmit}>
         {"Add Question to Queue"}
       </AddQuestionButton>
-      <Text fontSize={14} align={"center"}>
+      <Text fontSize={16} align={"center"} style={{ paddingBottom: "12px" }}>
         {result}
       </Text>
     </Container>
@@ -109,7 +123,7 @@ export const AddToQueue = () => {
 }
 
 const Container = styled.div`
-  gap: 16px;
+  gap: 18px;
   display: flex;
   height: 250px;
   flex-direction: column;
@@ -134,42 +148,23 @@ const AddQuestionBox = styled.div`
   flex-direction: column;
 `
 
-const AddQuestionInput = styled.input`
-  width: 130px;
-  padding: 12px;
-  font-size: 14px;
-  border-radius: 5px;
-  color: ${(p) => p.theme.colors.gray};
-  background: ${(p) => p.theme.colors.off_white};
-  border: ${(p) => p.theme.colors.off_white} solid 1px;
-  &:focus {
-    border: ${(p) => p.theme.colors.blue} solid 1px;
-    outline: ${(p) => p.theme.colors.light_blue} solid 2px;
-    outline-offset: 0.8px;
-  }
-`
-
 const AddQuestionSelect = styled.select`
-  width: 130px;
+  width: 180px;
+  height: 100%;
+  border: none;
   padding: 12px;
-  font-size: 14px;
-  border-radius: 5px;
+  font-size: 16px;
+  border-radius: 7px;
   color: ${(p) => p.theme.colors.gray};
   background: ${(p) => p.theme.colors.off_white};
-  border: ${(p) => p.theme.colors.off_white} solid 1px;
-  &:focus {
-    border: ${(p) => p.theme.colors.blue} solid 1px;
-    outline: ${(p) => p.theme.colors.light_blue} solid 2px;
-    outline-offset: 0.8px;
-  }
 `
 
 const AddQuestionButton = styled.div`
+  padding: 8px;
   font-size: 16px;
   cursor: pointer;
   text-align: center;
   border-radius: 4px;
-  padding: 4px 8px 4px 8px;
   color: ${(p) => p.theme.colors.white};
   background: ${(p) => p.theme.colors.blue};
   &:hover {

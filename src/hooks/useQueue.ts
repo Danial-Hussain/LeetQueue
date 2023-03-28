@@ -30,9 +30,7 @@ export const useQueue = () => {
 
   const getQueue = async (filter: string) => {
     let dataStr = await storage.get(STORAGE_LEETCODE_QUEUE)
-    console.log(dataStr)
     let dataJson: Question[] = dataStr === undefined ? [] : JSON.parse(dataStr)
-    console.log(dataJson)
     if (filter === "today") {
       const today = new Date().toISOString().slice(0, 10)
       dataJson = dataJson.filter((d) => d.date <= today)

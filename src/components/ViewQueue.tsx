@@ -2,6 +2,8 @@ import { motion, useAnimate } from "framer-motion"
 import { useEffect, useState } from "react"
 import styled from "styled-components"
 
+import { sendToBackground } from "@plasmohq/messaging"
+
 import { useQueue } from "~hooks/useQueue"
 import { useStats } from "~hooks/useStats"
 import { CheckIcon, RemoveIcon } from "~icons"
@@ -12,9 +14,16 @@ import type { Level, Question } from "~types"
 interface QueueProps {
   filter: Filter
   setTab: (tab: Tab) => void
+  completed: number
+  setCompleted: (completed: number) => void
 }
 
-export const Queue: React.FC<QueueProps> = ({ filter, setTab }) => {
+export const Queue: React.FC<QueueProps> = ({
+  filter,
+  setTab,
+  completed,
+  setCompleted
+}) => {
   const [scope, animate] = useAnimate()
   const [questions, setQuestions] = useState<Question[]>([])
   const { getQueue, addToQueue, removeFromQueue } = useQueue()
@@ -28,10 +37,12 @@ export const Queue: React.FC<QueueProps> = ({ filter, setTab }) => {
   }, [filter])
 
   const offset = 15
-  const maxLength = 6
   const qLength = questions.length
+  const maxLength = Math.min(4, qLength)
+
   const findZi = (i: number) => qLength - i
-  const findMt = (i: number) => qLength - i * offset + offset * qLength
+  const findMt = (i: number) =>
+    maxLength - Math.min(i, maxLength) * offset + offset * maxLength
 
   const handleComplete = () => {
     animate(
@@ -51,6 +62,8 @@ export const Queue: React.FC<QueueProps> = ({ filter, setTab }) => {
       removeFromQueue(questions[0])
       setQuestions([...questions.slice(1)])
       incrementCompleted()
+      setCompleted(completed + 1)
+      sendToBackground({ name: "badge" })
     })
   }
 
@@ -72,13 +85,13 @@ export const Queue: React.FC<QueueProps> = ({ filter, setTab }) => {
       removeFromQueue(questions[0])
       setQuestions([...questions.slice(1)])
       incrementDismissed()
+      sendToBackground({ name: "badge" })
     })
   }
 
   const requeue = () => {
     animate("#front", { top: -offset }).then(() => {
-      removeFromQueue(questions[0])
-      addToQueue(questions[0])
+      removeFromQueue(questions[0]).then(() => addToQueue(questions[0]))
       setQuestions([...questions.slice(1), questions[0]])
     })
   }
@@ -95,7 +108,7 @@ export const Queue: React.FC<QueueProps> = ({ filter, setTab }) => {
             top: findMt(i),
             zIndex: findZi(i),
             transition: {
-              delay: 0.4,
+              delay: 0.2,
               bounce: 0.3,
               type: "spring",
               opacity: { delay: 0.03 }
@@ -103,14 +116,18 @@ export const Queue: React.FC<QueueProps> = ({ filter, setTab }) => {
           }}>
           <QueueEntryBox direction="col" padding="0px 0px 0px 12px;">
             <QueueEntryBox direction="row" align="center">
-              <QueueEntryQuestionName>{e.name}</QueueEntryQuestionName>
+              <QueueEntryQuestionName>
+                {e.name.slice(0, 25)} {e.name.length >= 25 && "..."}
+              </QueueEntryQuestionName>
               <QueueEntryQuestionLevel variant={e.level}>
                 {e.level}
               </QueueEntryQuestionLevel>
             </QueueEntryBox>
-            <QueueEntryQuestionLink href={e.link}>
-              {"Go to question"}
-            </QueueEntryQuestionLink>
+            {e.link !== "" && (
+              <QueueEntryQuestionLink href={e.link}>
+                {"Go to question"}
+              </QueueEntryQuestionLink>
+            )}
           </QueueEntryBox>
           <QueueEntryBox direction="row">
             <QueueEntryActionButton onClick={handleComplete}>
@@ -146,10 +163,16 @@ export const Queue: React.FC<QueueProps> = ({ filter, setTab }) => {
 export type Filter = "today" | "all time"
 
 interface ViewQueueProps {
+  completed: number
   setTab: (tab: Tab) => void
+  setCompleted: (completed: number) => void
 }
 
-export const ViewQueue: React.FC<ViewQueueProps> = ({ setTab }) => {
+export const ViewQueue: React.FC<ViewQueueProps> = ({
+  setTab,
+  completed,
+  setCompleted
+}) => {
   const [filter, setFilter] = useState<Filter>("today")
 
   return (
@@ -166,7 +189,12 @@ export const ViewQueue: React.FC<ViewQueueProps> = ({ setTab }) => {
           {"All Time"}
         </Filter>
       </FiltersContainer>
-      <Queue filter={filter} setTab={setTab} />
+      <Queue
+        filter={filter}
+        setTab={setTab}
+        completed={completed}
+        setCompleted={setCompleted}
+      />
     </Container>
   )
 }
@@ -210,7 +238,7 @@ const QueueEntry = styled.div`
   border-radius: 10px;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 2px 2px 1px 1px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 3px 10px rgb(0 0 0 / 0.2);
   background: ${(p) => p.theme.colors.light_white};
 `
 
@@ -228,7 +256,7 @@ const QueueEntryBox = styled.div<{
 `
 
 const QueueEntryQuestionName = styled.div`
-  font-size: 16px;
+  font-size: 14px;
   margin-right: 8px;
   color: ${(p) => p.theme.colors.gray};
 `
@@ -253,6 +281,7 @@ const QueueEntryQuestionLevel = styled.div<{ variant: Level }>`
 `
 
 const QueueEntryQuestionLink = styled.a`
+  font-size: 12px;
   color: ${(p) => p.theme.colors.light_blue};
 `
 
@@ -265,7 +294,7 @@ const QueueEntryActionButton = styled.div`
   align-items: center;
   margin: 0px 4px 0px 4px;
   justify-content: center;
-  background: ${(p) => p.theme.colors.off_white};
+  background: transparent;
 `
 
 const RequeueButtonContainer = styled.div`
@@ -296,12 +325,12 @@ const QueueEmptyText = styled.div`
 `
 
 const AddQuestionButton = styled.div`
+  padding: 8px;
   font-size: 16px;
   cursor: pointer;
   margin-top: 24px;
   text-align: center;
   border-radius: 4px;
-  padding: 4px 8px 4px 8px;
   color: ${(p) => p.theme.colors.white};
   background: ${(p) => p.theme.colors.blue};
   &:hover {

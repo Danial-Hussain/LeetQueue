@@ -26,5 +26,10 @@ export const useStats = () => {
     await storage.set(STORAGE_QUESTIONS_DISMISSED, dismissedNew)
   }
 
-  return { incrementCompleted, incrementDismissed }
+  const getCompleted = async () => {
+    let completed = await storage.get(STORAGE_QUESTIONS_COMPLETED)
+    return completed === undefined ? 0 : parseInt(completed)
+  }
+
+  return { incrementCompleted, incrementDismissed, getCompleted }
 }
